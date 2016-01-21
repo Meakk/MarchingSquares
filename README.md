@@ -1,4 +1,4 @@
 # MarchingSquares
 A 2D surface reconstruction JavaScript library using marching squares algorithm
 
-## TODO
+This library is still in development, do not use yet.
