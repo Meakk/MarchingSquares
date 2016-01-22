@@ -23,8 +23,7 @@ var MarchingSquares = (function() {
   var bounds = null,
       gridSize = null,
       weightReference = null,
-      points = [],
-      squareSize,
+      squareSize = null,
       getWeight = null;
 
   function interp(a, b) {
@@ -36,7 +35,11 @@ var MarchingSquares = (function() {
   var my = function() {
 
     this.setGrid = function(lowX, highX, lowY, highY, nbSquaresX, nbSquaresY) {
-      //todo : check values
+      if (lowX > highX || lowY > highY || nbSquaresX <= 0 || nbSquaresY <= 0) {
+        console.warn("[MarchingSquares] Arguments are invalids in setGrid function.");
+        return;
+      }
+
       bounds = {
         bx: lowX,
         ex: highX,
@@ -54,12 +57,21 @@ var MarchingSquares = (function() {
     }
 
     this.setWeightFunction = function(weightLimit, weightFunction) {
-      //todo : check values
+      if (weightLimit <= 0 || typeof weightFunction != 'function') {
+        console.warn("[MarchingSquares] Arguments are invalids in setWeightFunction function.");
+        return;
+      }
+
       weightReference = weightLimit;
       getWeight = weightFunction;
     }
 
     this.computeLines = function() {
+      if (!(bounds && gridSize && weightReference && squareSize && getWeight)) {
+        console.warn("[MarchingSquares] Can not compute lines. Call setGrid and setWeightFunction first.");
+        return [];
+      }
+
       //construct grid
       var grid = [];
       for (var i=0; i<gridSize.x+1; i++) {
