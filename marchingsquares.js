@@ -24,12 +24,74 @@ var MarchingSquares = (function() {
       gridSize = null,
       weightReference = null,
       squareSize = null,
-      getWeight = null;
+      getWeight = null,
+      polylines;
 
   function interp(a, b) {
     var alpha = (weightReference - b.w)  /(a.w - b.w);
     return {x: alpha*a.x + (1-alpha)*b.x,
             y: alpha*a.y + (1-alpha)*b.y };
+  }
+  
+  function doSquare(grid, i, j, currentPath) {
+    var c = 0;
+    var v0 = grid[i+1][j];
+    var v1 = grid[i+1][j+1];
+    var v2 = grid[i][j+1];
+    var v3 = grid[i][j];
+    
+    if (v0.w > weightReference) c += 1;
+    if (v1.w > weightReference) c += 2;
+    if (v2.w > weightReference) c += 4;
+    if (v3.w > weightReference) c += 8;
+    
+    if ((v3.count == 1 && c != 5 && c != 10) || v3.count == 2) {
+      if (currentPath.length != 0) {
+        polylines.push(currentPath);
+      }
+      return;
+    }
+    
+    //debug
+    if (v3.count > 2) console.warn("what ??");
+    
+    v3.count ++;
+      
+    switch(c) {
+    case 0 : break;
+    case 1 : currentPath.push(interp(v0,v3)); doSquare(grid,i+1,j,currentPath);
+             break;
+    case 2 : currentPath.push(interp(v1,v0)); doSquare(grid,i,j+1,currentPath);
+             break;
+    case 3 : currentPath.push(interp(v0,v3)); doSquare(grid,i,j+1,currentPath);
+             break;
+    case 4 : currentPath.push(interp(v1,v2)); doSquare(grid,i-1,j,currentPath);
+             break;
+    case 5 : if (v3.count == 1) { currentPath.push(interp(v0,v1)); doSquare(grid,i+1,j,currentPath); }
+             else { currentPath.push(interp(v2,v3)); doSquare(grid,i-1,j,currentPath); }
+             break;
+    case 6 : currentPath.push(interp(v0,v1)); doSquare(grid,i-1,j,currentPath);
+             break;
+    case 7 : currentPath.push(interp(v0,v3)); doSquare(grid,i-1,j,currentPath);
+             break;
+    case 8 : currentPath.push(interp(v3,v2)); doSquare(grid,i,j-1,currentPath);
+             break;
+    case 9 : currentPath.push(interp(v3,v2)); doSquare(grid,i+1,j,currentPath);
+             break;
+    case 10: if (v3.count == 1) { currentPath.push(interp(v1,v2)); doSquare(grid,i,j+1,currentPath); }
+             else { currentPath.push(interp(v0,v3)); doSquare(grid,i,j-1,currentPath); }
+             break;
+    case 11: currentPath.push(interp(v3,v2)); doSquare(grid,i,j+1,currentPath);
+             break;
+    case 12: currentPath.push(interp(v1,v2)); doSquare(grid,i,j-1,currentPath);
+             break;
+    case 13: currentPath.push(interp(v1,v2)); doSquare(grid,i+1,j,currentPath);
+             break;
+    case 14: currentPath.push(interp(v1,v0)); doSquare(grid,i,j-1,currentPath);
+             break;
+    case 15: break;
+    default: break;
+    }
   }
 
   var my = function() {
@@ -74,73 +136,38 @@ var MarchingSquares = (function() {
 
       //construct grid
       var grid = [];
-      for (var i=0; i<gridSize.x+1; i++) {
+      for (var i=0; i<gridSize.x+3; i++) {
         var row = [];
-        for (var j=0; j<gridSize.y+1; j++) {
-          var x = bounds.bx+i*squareSize.x;
-          var y = bounds.by+j*squareSize.y;
-          row.push({x: x,
-                    y: y,
-                    w: getWeight(x,y)
-                   });
+        for (var j=0; j<gridSize.y+3; j++) {
+          var x = bounds.bx+(i-1)*squareSize.x;
+          var y = bounds.by+(j-1)*squareSize.y;
+          if (i == 0 || j == 0 || i == gridSize.x+2 || j == gridSize.y+2) {
+            row.push({x: x,
+                      y: y,
+                      w: 0,
+                      count: 0
+                     });
+          } else {
+            row.push({x: x,
+                      y: y,
+                      w: getWeight(x,y),
+                      count: 0
+                     });
+          }
         }
         grid.push(row);
       }
   
-      var lines = [];
-  
-      //construct lines
-      for (var i=0; i<gridSize.x; i++) {
-        for (var j=0; j<gridSize.y; j++) {
-          var c = 0;
-          var v0 = grid[i+1][j];
-          var v1 = grid[i+1][j+1];
-          var v2 = grid[i][j+1];
-          var v3 = grid[i][j];
-          if (v0.w > weightReference) c += 1;
-          if (v1.w > weightReference) c += 2;
-          if (v2.w > weightReference) c += 4;
-          if (v3.w > weightReference) c += 8;
+      //construct polylines
+      polylines = [];
       
-          switch(c) {
-          case 0 : break;
-          case 1 : lines.push([interp(v0,v3), interp(v0,v1)]);
-                   break;
-          case 2 : lines.push([interp(v1,v0), interp(v1,v2)]);
-                   break;
-          case 3 : lines.push([interp(v0,v3), interp(v1,v2)]);
-                   break;
-          case 4 : lines.push([interp(v2,v3), interp(v2,v1)]);
-                   break;
-          case 5 : lines.push([interp(v0,v3), interp(v2,v3)]);
-                   lines.push([interp(v0,v1), interp(v2,v1)]);
-                   break;
-          case 6 : lines.push([interp(v2,v3), interp(v1,v0)]);
-                   break;
-          case 7 : lines.push([interp(v0,v3), interp(v2,v3)]);
-                   break;
-          case 8 : lines.push([interp(v3,v0), interp(v3,v2)]);
-                   break;
-          case 9 : lines.push([interp(v3,v2), interp(v0,v1)]);
-                   break;
-          case 10: lines.push([interp(v3,v0), interp(v1,v0)]);
-                   lines.push([interp(v3,v2), interp(v1,v2)]);
-                   break;
-          case 11: lines.push([interp(v3,v2), interp(v1,v2)]);
-                   break;
-          case 12: lines.push([interp(v3,v0), interp(v2,v1)]);
-                   break;
-          case 13: lines.push([interp(v0,v1), interp(v2,v1)]);
-                   break;
-          case 14: lines.push([interp(v3,v0), interp(v1,v0)]);
-                   break;
-          case 15: break;
-          default: break;
-          }
+      for (var i=1; i<gridSize.x+1; i++) {
+        for (var j=1; j<gridSize.y+1; j++) {
+          doSquare(grid, i, j, []);
         }
       }
 
-      return lines;
+      return polylines;
     }
 
   };
