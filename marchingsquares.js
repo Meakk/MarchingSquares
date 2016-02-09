@@ -52,9 +52,6 @@ var MarchingSquares = (function() {
       return;
     }
     
-    //debug
-    if (v3.count > 2) console.warn("what ??");
-    
     v3.count ++;
       
     switch(c) {
